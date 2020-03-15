@@ -10,6 +10,7 @@ use BotMan\BotMan\Messages\Outgoing\Question;
 use Closure;
 use Illuminate\Support\Collection;
 use Opis\Closure\SerializableClosure;
+use Psr\Container\ContainerInterface;
 
 trait HandlesConversations
 {
@@ -127,16 +128,27 @@ trait HandlesConversations
     }
 
     /**
-     * @param mixed $closure
+     * @param mixed $serializedClosure
      * @return string
      */
-    protected function unserializeClosure($closure)
+    protected function unserializeClosure($serializedClosure)
     {
         if ($this->getDriver()->serializesCallbacks() && ! $this->runsOnSocket) {
-            return unserialize($closure);
+            $closure = @unserialize($serializedClosure);
+            if (is_callable($closure)) {
+                return $closure;
+            }
+            if (class_exists($serializedClosure) && $this->container instanceof ContainerInterface) {
+                $closure = $this->container->get($serializedClosure);
+                if (is_callable($closure)) {
+                    return $closure;
+                }
+            }
+            // Earlier we suppressed the E_NOTICE, if we are here we need to surface it.
+            return unserialize($serializedClosure);
         }
 
-        return $closure;
+        return $serializedClosure;
     }
 
     /**
@@ -150,12 +162,13 @@ trait HandlesConversations
     {
         if (is_array($callbacks)) {
             foreach ($callbacks as &$callback) {
-                $callback['callback'] = $this->serializeClosure($callback['callback']);
+                if (is_callable($callback['callback'])) {
+                    $callback['callback'] = $this->serializeClosure($callback['callback']);
+                }
             }
-        } else {
+        } elseif (is_callable($callbacks)) {
             $callbacks = $this->serializeClosure($callbacks);
         }
-
         return $callbacks;
     }
 
@@ -287,6 +300,8 @@ trait HandlesConversations
             $next = $next->getClosure()->bindTo($conversation, $conversation);
         } elseif ($next instanceof Closure) {
             $next = $next->bindTo($conversation, $conversation);
+        } elseif (is_object($next) && method_exists($next, 'setConversation')) {
+            $next->setConversation($conversation);
         }
 
         $parameters[] = $conversation;
