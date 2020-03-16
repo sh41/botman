@@ -57,7 +57,7 @@ abstract class Conversation
 
     /**
      * @param string|Question $question
-     * @param array|Closure $next
+     * @param array|Closure|string $next
      * @param array $additionalParameters
      * @return $this
      */
@@ -71,7 +71,7 @@ abstract class Conversation
 
     /**
      * @param string|\BotMan\BotMan\Messages\Outgoing\Question $question
-     * @param array|Closure $next
+     * @param array|Closure|string $next
      * @param array|Closure $repeat
      * @param array $additionalParameters
      * @return $this
@@ -87,7 +87,7 @@ abstract class Conversation
 
     /**
      * @param string|\BotMan\BotMan\Messages\Outgoing\Question $question
-     * @param array|Closure $next
+     * @param array|Closure|string $next
      * @param array|Closure $repeat
      * @param array $additionalParameters
      * @return $this
@@ -103,7 +103,7 @@ abstract class Conversation
 
     /**
      * @param string|\BotMan\BotMan\Messages\Outgoing\Question $question
-     * @param array|Closure $next
+     * @param array|Closure|string $next
      * @param array|Closure $repeat
      * @param array $additionalParameters
      * @return $this
@@ -119,7 +119,7 @@ abstract class Conversation
 
     /**
      * @param string|\BotMan\BotMan\Messages\Outgoing\Question $question
-     * @param array|Closure $next
+     * @param array|Closure|string $next
      * @param array|Closure $repeat
      * @param array $additionalParameters
      * @return $this
@@ -135,7 +135,7 @@ abstract class Conversation
 
     /**
      * @param string|\BotMan\BotMan\Messages\Outgoing\Question $question
-     * @param array|Closure $next
+     * @param array|Closure|string $next
      * @param array|Closure $repeat
      * @param array $additionalParameters
      * @return $this
@@ -151,7 +151,7 @@ abstract class Conversation
 
     /**
      * @param string|\BotMan\BotMan\Messages\Outgoing\Question $question
-     * @param array|Closure                                    $next
+     * @param array|Closure|string                             $next
      * @param array|Closure                                    $repeat
      * @param array                                            $additionalParameters
      *
