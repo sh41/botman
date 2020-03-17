@@ -118,7 +118,7 @@ trait HandlesConversations
      * @param Closure $closure
      * @return string
      */
-    public function serializeClosure(Closure $closure)
+    public function serializeCallable(Callable $closure)
     {
         if ($this->getDriver()->serializesCallbacks() && ! $this->runsOnSocket) {
             return serialize(new SerializableClosure($closure, true));
@@ -131,20 +131,15 @@ trait HandlesConversations
      * @param mixed $serializedClosure
      * @return string
      */
-    protected function unserializeClosure($serializedClosure)
+    public function unserializeClosure($serializedClosure)
     {
         if ($this->getDriver()->serializesCallbacks() && ! $this->runsOnSocket) {
-            $closure = @unserialize($serializedClosure);
-            if (is_callable($closure)) {
-                return $closure;
-            }
             if (class_exists($serializedClosure) && $this->container instanceof ContainerInterface) {
                 $closure = $this->container->get($serializedClosure);
                 if (is_callable($closure)) {
                     return $closure;
                 }
             }
-            // Earlier we suppressed the E_NOTICE, if we are here we need to surface it.
             return unserialize($serializedClosure);
         }
 
@@ -297,11 +292,14 @@ trait HandlesConversations
     protected function prepareConversationClosure($next, Conversation $conversation, array $parameters)
     {
         if ($next instanceof SerializableClosure) {
-            $next = $next->getClosure()->bindTo($conversation, $conversation);
-        } elseif ($next instanceof Closure) {
+            $next = $next->getClosure();
+        }
+        if ($next instanceof Closure) {
             $next = $next->bindTo($conversation, $conversation);
-        } elseif (is_object($next) && method_exists($next, 'setConversation')) {
+        }
+        if ($next instanceof QuestionAsContainerServiceInterface) {
             $next->setConversation($conversation);
+            $next->setBot($this);
         }
 
         $parameters[] = $conversation;
