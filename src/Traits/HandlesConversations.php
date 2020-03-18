@@ -174,18 +174,23 @@ trait HandlesConversations
      */
     protected function prepareCallbacks($callbacks)
     {
+        if (!is_array($callbacks)) {
+            $callbacks = [
+                [
+                    'pattern' => '.*',
+                    'callback' => $callbacks
+                ]
+            ];
+        }
         if (is_array($callbacks)) {
             foreach ($callbacks as &$callback) {
-                if ($callback['callback'] instanceof Closure) {
+                if (is_string($callback['callback'])) {
+                    $callback['service_id'] = $callback['callback'];
+                } elseif ($callback['callback'] instanceof Closure) {
                     $callback['callback'] = $this->serializeClosure($callback['callback']);
                 }
             }
-        } else {
-            if ($callbacks instanceof Closure) {
-                $callbacks = $this->serializeClosure($callbacks);
-            }
         }
-
         return $callbacks;
     }
 
@@ -248,7 +253,11 @@ trait HandlesConversations
                             $parameters = $matches;
                         }
                         $this->matches = $parameters;
-                        $next = $this->unserializeClosure($callback['callback']);
+                        if (isset($callback['service_id'])) {
+                            $next = $this->unserializeClosure($callback['service_id']);
+                        } else {
+                            $next = $this->unserializeClosure($callback['callback']);
+                        }
                         break;
                     }
                 }

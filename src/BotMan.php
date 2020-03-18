@@ -183,6 +183,14 @@ class BotMan
     }
 
     /**
+     * @return ContainerInterface
+     */
+    public function getContainer()
+    {
+        return $this->container;
+    }
+
+    /**
      * Retrieve the chat message.
      *
      * @return array

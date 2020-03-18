@@ -15,6 +15,7 @@ use BotMan\BotMan\Messages\Outgoing\Question;
 use Closure;
 use Illuminate\Support\Collection;
 use Spatie\Macroable\Macroable;
+use Psr\Container\ContainerInterface;
 
 /**
  * Class Conversation.
@@ -182,11 +183,33 @@ abstract class Conversation
         $additionalParameters = unserialize($conversation['additionalParameters']);
 
         if (is_string($next)) {
-            $next = unserialize($next)->getClosure();
+            if ($this->bot->getDriver()->serializesCallbacks() && ! $this->bot->runsOnSocket()) {
+                if ($this->getBot()->getContainer() instanceof ContainerInterface) {
+                    try {
+                        $next = $this->getBot()->getContainer()->get($next);
+                    } catch (NotFoundExceptionInterface $e) {
+                    }
+                }
+                if (is_string($next)) {
+                    $next = unserialize($next)->getClosure();
+                }
+            }
         } elseif (is_array($next)) {
             $next = Collection::make($next)->map(function ($callback) {
                 if ($this->bot->getDriver()->serializesCallbacks() && ! $this->bot->runsOnSocket()) {
-                    $callback['callback'] = unserialize($callback['callback'])->getClosure();
+                    if ($this->getBot()->getContainer() instanceof ContainerInterface) {
+                        try {
+                            if (isset($callback['service_id'])) {
+                                $callback['callback'] = $this->getBot()->getContainer()->get($callback['service_id']);
+                            } else {
+                                $callback['callback'] = $this->getBot()->getContainer()->get($callback['callback']);
+                            }
+                        } catch (NotFoundExceptionInterface $e) {
+                        }
+                    }
+                    if (is_string($callback['callback'])) {
+                        $callback['callback'] = unserialize($callback['callback'])->getClosure();
+                    }
                 }
 
                 return $callback;
