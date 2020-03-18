@@ -643,6 +643,8 @@ class BotMan
     {
         $this->outgoingMessage = \is_string($message) ? OutgoingMessage::create($message) : $message;
 
+        $this->outgoingMessage = $this->middleware->applyMiddleware('preSending', $this->outgoingMessage);
+
         return $this->sendPayload($this->getDriver()->buildServicePayload($this->outgoingMessage, $this->message,
             $additionalParameters));
     }

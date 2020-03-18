@@ -6,6 +6,7 @@ use BotMan\BotMan\BotMan;
 use BotMan\BotMan\Interfaces\Middleware\Captured;
 use BotMan\BotMan\Interfaces\Middleware\Heard;
 use BotMan\BotMan\Interfaces\Middleware\Matching;
+use BotMan\BotMan\Interfaces\Middleware\PreSending;
 use BotMan\BotMan\Interfaces\Middleware\Received;
 use BotMan\BotMan\Interfaces\Middleware\Sending;
 use BotMan\BotMan\Interfaces\MiddlewareInterface;
@@ -22,6 +23,8 @@ class MiddlewareManager
     protected $matching = [];
     /** @var Heard[] */
     protected $heard = [];
+    /** @var PreSending[] */
+    protected $preSending = [];
     /** @var Sending[] */
     protected $sending = [];
     /** @var BotMan */
@@ -101,6 +104,22 @@ class MiddlewareManager
 
         return $this;
     }
+
+    /**
+     * @param PreSending[] $middleware
+     * @return PreSending[]|$this
+     */
+    public function preSending(PreSending ...$middleware)
+    {
+        if (empty($middleware)) {
+            return $this->preSending;
+        }
+        $this->preSending = array_merge($this->preSending, $middleware);
+
+        return $this;
+    }
+
+
 
     /**
      * @param string $method
