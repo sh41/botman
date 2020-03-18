@@ -10,6 +10,8 @@ use BotMan\BotMan\Messages\Outgoing\Question;
 use Closure;
 use Illuminate\Support\Collection;
 use Opis\Closure\SerializableClosure;
+use Psr\Container\ContainerInterface;
+use Psr\Container\NotFoundExceptionInterface;
 
 trait HandlesConversations
 {
@@ -133,6 +135,11 @@ trait HandlesConversations
     protected function unserializeClosure($closure)
     {
         if ($this->getDriver()->serializesCallbacks() && ! $this->runsOnSocket) {
+            if ($this->container instanceof ContainerInterface) {
+                try {
+                    return $this->container->get($closure);
+                } catch (NotFoundExceptionInterface $e) {}
+            }
             return unserialize($closure);
         }
 
@@ -150,10 +157,14 @@ trait HandlesConversations
     {
         if (is_array($callbacks)) {
             foreach ($callbacks as &$callback) {
-                $callback['callback'] = $this->serializeClosure($callback['callback']);
+                if ($callback['callback'] instanceof Closure) {
+                    $callback['callback'] = $this->serializeClosure($callback['callback']);
+                }
             }
         } else {
-            $callbacks = $this->serializeClosure($callbacks);
+            if ($callbacks instanceof Closure) {
+                $callbacks = $this->serializeClosure($callbacks);
+            }
         }
 
         return $callbacks;
