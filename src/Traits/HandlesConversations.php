@@ -13,6 +13,7 @@ use Closure;
 use Illuminate\Support\Collection;
 use Opis\Closure\SerializableClosure;
 use Psr\Container\ContainerInterface;
+use Psr\Container\NotFoundExceptionInterface;
 
 trait HandlesConversations
 {
@@ -147,27 +148,21 @@ trait HandlesConversations
     }
 
     /**
-     * @param mixed $serializedClosure
+     * @param mixed $closure
      * @return string
      */
-    protected function unserializeClosure($serializedClosure)
+    protected function unserializeClosure($closure)
     {
         if ($this->getDriver()->serializesCallbacks() && ! $this->runsOnSocket) {
-            $closure = @unserialize($serializedClosure);
-            if (is_callable($closure)) {
-                return $closure;
+            if ($this->container instanceof ContainerInterface) {
+                try {
+                    return $this->container->get($closure);
+                } catch (NotFoundExceptionInterface $e) {}
             }
-            if (class_exists($serializedClosure) && $this->container instanceof ContainerInterface) {
-                $closure = $this->container->get($serializedClosure);
-                if (is_callable($closure)) {
-                    return $closure;
-                }
-            }
-            // Earlier we suppressed the E_NOTICE, if we are here we need to surface it.
-            return unserialize($serializedClosure);
+            return unserialize($closure);
         }
 
-        return $serializedClosure;
+        return $closure;
     }
 
     /**
@@ -181,13 +176,16 @@ trait HandlesConversations
     {
         if (is_array($callbacks)) {
             foreach ($callbacks as &$callback) {
-                if (is_callable($callback['callback'])) {
+                if ($callback['callback'] instanceof Closure) {
                     $callback['callback'] = $this->serializeClosure($callback['callback']);
                 }
             }
-        } elseif (is_callable($callbacks)) {
-            $callbacks = $this->serializeClosure($callbacks);
+        } else {
+            if ($callbacks instanceof Closure) {
+                $callbacks = $this->serializeClosure($callbacks);
+            }
         }
+
         return $callbacks;
     }
 
@@ -319,8 +317,6 @@ trait HandlesConversations
             $next = $next->getClosure()->bindTo($conversation, $conversation);
         } elseif ($next instanceof Closure) {
             $next = $next->bindTo($conversation, $conversation);
-        } elseif (is_object($next) && method_exists($next, 'setConversation')) {
-            $next->setConversation($conversation);
         }
 
         $parameters[] = $conversation;

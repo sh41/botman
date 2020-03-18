@@ -55,6 +55,38 @@ class LaravelTest extends TestCase
     }
 
     /** @test */
+    public function it_can_unserialize_closures_using_the_bot()
+    {
+        $conversation = new TestConversation();
+
+        $bot = app('botman');
+        $bot->hears('foo', function () {
+        });
+        BotMan::storeConversation($conversation, function ($answer) {
+        });
+
+        $cached = Cache::get('conversation-'.sha1(null).'-'.sha1(null));
+        $this->assertEquals($conversation, $cached['conversation']);
+        $this->assertTrue(is_string($cached['next']));
+    }
+
+    /** @test */
+    public function it_can_serialize_named_services_as_callbacks_using_the_bot()
+    {
+        $conversation = new TestConversation();
+
+        $bot = app('botman');
+        $bot->hears('foo', function () {
+        });
+        $service_name = 'foobar';
+        BotMan::storeConversation($conversation, $service_name);
+
+        $cached = Cache::get('conversation-'.sha1(null).'-'.sha1(null));
+        $this->assertEquals($conversation, $cached['conversation']);
+        $this->assertEquals($service_name, $cached['next']);
+    }
+
+    /** @test */
     public function it_can_get_autowired_classes()
     {
         $bot = app('botman');
