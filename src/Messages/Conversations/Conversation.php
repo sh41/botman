@@ -197,13 +197,9 @@ abstract class Conversation
         } elseif (is_array($next)) {
             $next = Collection::make($next)->map(function ($callback) {
                 if ($this->bot->getDriver()->serializesCallbacks() && ! $this->bot->runsOnSocket()) {
-                    if ($this->getBot()->getContainer() instanceof ContainerInterface) {
+                    if ($this->getBot()->getContainer() instanceof ContainerInterface && is_string($callback['service_id'])) {
                         try {
-                            if (isset($callback['service_id'])) {
                                 $callback['callback'] = $this->getBot()->getContainer()->get($callback['service_id']);
-                            } else {
-                                $callback['callback'] = $this->getBot()->getContainer()->get($callback['callback']);
-                            }
                         } catch (NotFoundExceptionInterface $e) {
                         }
                     }

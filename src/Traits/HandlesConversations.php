@@ -84,7 +84,9 @@ trait HandlesConversations
         if (is_null($conversation)) {
             $conversation = $this->cache->get($message->getOriginatedConversationIdentifier());
         }
-
+        if (isset($conversation['conversation']->rebootServiceOnDeserialization) && $conversation['conversation']->rebootServiceOnDeserialization && $this->container instanceof ContainerInterface) {
+            $conversation['conversation'] = $this->container->get($conversation['conversation']->rebootServiceOnDeserialization);
+        }
         return $conversation;
     }
 
@@ -154,7 +156,7 @@ trait HandlesConversations
     protected function unserializeClosure($closure)
     {
         if ($this->getDriver()->serializesCallbacks() && ! $this->runsOnSocket) {
-            if ($this->container instanceof ContainerInterface) {
+            if ($this->container instanceof ContainerInterface && strlen($closure) < 255) {
                 try {
                     return $this->container->get($closure);
                 } catch (NotFoundExceptionInterface $e) {}
@@ -188,6 +190,7 @@ trait HandlesConversations
                     $callback['service_id'] = $callback['callback'];
                 } elseif ($callback['callback'] instanceof Closure) {
                     $callback['callback'] = $this->serializeClosure($callback['callback']);
+                    $callback['service_id'] = null;
                 }
             }
         }
