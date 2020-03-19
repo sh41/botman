@@ -13,6 +13,7 @@ use Closure;
 use Illuminate\Support\Collection;
 use Opis\Closure\SerializableClosure;
 use Psr\Container\ContainerInterface;
+use Psr\Container\NotFoundExceptionInterface;
 
 trait HandlesConversations
 {
@@ -83,7 +84,9 @@ trait HandlesConversations
         if (is_null($conversation)) {
             $conversation = $this->cache->get($message->getOriginatedConversationIdentifier());
         }
-
+        if (isset($conversation['conversation']->rebootServiceOnDeserialization) && $conversation['conversation']->rebootServiceOnDeserialization && $this->container instanceof ContainerInterface) {
+            $conversation['conversation'] = $this->container->get($conversation['conversation']->rebootServiceOnDeserialization);
+        }
         return $conversation;
     }
 
@@ -153,6 +156,11 @@ trait HandlesConversations
     protected function unserializeClosure($closure)
     {
         if ($this->getDriver()->serializesCallbacks() && ! $this->runsOnSocket) {
+            if ($this->container instanceof ContainerInterface && strlen($closure) < 255) {
+                try {
+                    return $this->container->get($closure);
+                } catch (NotFoundExceptionInterface $e) {}
+            }
             return unserialize($closure);
         }
 
@@ -168,14 +176,24 @@ trait HandlesConversations
      */
     protected function prepareCallbacks($callbacks)
     {
+        if (!is_array($callbacks)) {
+            $callbacks = [
+                [
+                    'pattern' => '.*',
+                    'callback' => $callbacks
+                ]
+            ];
+        }
         if (is_array($callbacks)) {
             foreach ($callbacks as &$callback) {
-                $callback['callback'] = $this->serializeClosure($callback['callback']);
+                if (is_string($callback['callback'])) {
+                    $callback['service_id'] = $callback['callback'];
+                } elseif ($callback['callback'] instanceof Closure) {
+                    $callback['callback'] = $this->serializeClosure($callback['callback']);
+                    $callback['service_id'] = null;
+                }
             }
-        } else {
-            $callbacks = $this->serializeClosure($callbacks);
         }
-
         return $callbacks;
     }
 
@@ -238,7 +256,11 @@ trait HandlesConversations
                             $parameters = $matches;
                         }
                         $this->matches = $parameters;
-                        $next = $this->unserializeClosure($callback['callback']);
+                        if (isset($callback['service_id'])) {
+                            $next = $this->unserializeClosure($callback['service_id']);
+                        } else {
+                            $next = $this->unserializeClosure($callback['callback']);
+                        }
                         break;
                     }
                 }

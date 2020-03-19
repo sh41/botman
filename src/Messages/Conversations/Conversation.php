@@ -15,6 +15,7 @@ use BotMan\BotMan\Messages\Outgoing\Question;
 use Closure;
 use Illuminate\Support\Collection;
 use Spatie\Macroable\Macroable;
+use Psr\Container\ContainerInterface;
 
 /**
  * Class Conversation.
@@ -57,7 +58,7 @@ abstract class Conversation
 
     /**
      * @param string|Question $question
-     * @param array|Closure $next
+     * @param array|Closure|string $next
      * @param array $additionalParameters
      * @return $this
      */
@@ -71,7 +72,7 @@ abstract class Conversation
 
     /**
      * @param string|\BotMan\BotMan\Messages\Outgoing\Question $question
-     * @param array|Closure $next
+     * @param array|Closure|string $next
      * @param array|Closure $repeat
      * @param array $additionalParameters
      * @return $this
@@ -87,7 +88,7 @@ abstract class Conversation
 
     /**
      * @param string|\BotMan\BotMan\Messages\Outgoing\Question $question
-     * @param array|Closure $next
+     * @param array|Closure|string $next
      * @param array|Closure $repeat
      * @param array $additionalParameters
      * @return $this
@@ -103,7 +104,7 @@ abstract class Conversation
 
     /**
      * @param string|\BotMan\BotMan\Messages\Outgoing\Question $question
-     * @param array|Closure $next
+     * @param array|Closure|string $next
      * @param array|Closure $repeat
      * @param array $additionalParameters
      * @return $this
@@ -119,7 +120,7 @@ abstract class Conversation
 
     /**
      * @param string|\BotMan\BotMan\Messages\Outgoing\Question $question
-     * @param array|Closure $next
+     * @param array|Closure|string $next
      * @param array|Closure $repeat
      * @param array $additionalParameters
      * @return $this
@@ -135,7 +136,7 @@ abstract class Conversation
 
     /**
      * @param string|\BotMan\BotMan\Messages\Outgoing\Question $question
-     * @param array|Closure $next
+     * @param array|Closure|string $next
      * @param array|Closure $repeat
      * @param array $additionalParameters
      * @return $this
@@ -151,7 +152,7 @@ abstract class Conversation
 
     /**
      * @param string|\BotMan\BotMan\Messages\Outgoing\Question $question
-     * @param array|Closure                                    $next
+     * @param array|Closure|string                             $next
      * @param array|Closure                                    $repeat
      * @param array                                            $additionalParameters
      *
@@ -182,11 +183,29 @@ abstract class Conversation
         $additionalParameters = unserialize($conversation['additionalParameters']);
 
         if (is_string($next)) {
-            $next = unserialize($next)->getClosure();
+            if ($this->bot->getDriver()->serializesCallbacks() && ! $this->bot->runsOnSocket()) {
+                if ($this->getBot()->getContainer() instanceof ContainerInterface) {
+                    try {
+                        $next = $this->getBot()->getContainer()->get($next);
+                    } catch (NotFoundExceptionInterface $e) {
+                    }
+                }
+                if (is_string($next)) {
+                    $next = unserialize($next)->getClosure();
+                }
+            }
         } elseif (is_array($next)) {
             $next = Collection::make($next)->map(function ($callback) {
                 if ($this->bot->getDriver()->serializesCallbacks() && ! $this->bot->runsOnSocket()) {
-                    $callback['callback'] = unserialize($callback['callback'])->getClosure();
+                    if ($this->getBot()->getContainer() instanceof ContainerInterface && is_string($callback['service_id'])) {
+                        try {
+                                $callback['callback'] = $this->getBot()->getContainer()->get($callback['service_id']);
+                        } catch (NotFoundExceptionInterface $e) {
+                        }
+                    }
+                    if (is_string($callback['callback'])) {
+                        $callback['callback'] = unserialize($callback['callback'])->getClosure();
+                    }
                 }
 
                 return $callback;
